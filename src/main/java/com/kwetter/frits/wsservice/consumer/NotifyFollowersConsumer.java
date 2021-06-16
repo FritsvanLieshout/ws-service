@@ -1,5 +1,6 @@
 package com.kwetter.frits.wsservice.consumer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kwetter.frits.wsservice.configuration.KafkaProperties;
 import com.kwetter.frits.wsservice.entity.NotifyFollowersDTO;
@@ -58,11 +59,12 @@ public class NotifyFollowersConsumer {
                         log.info("Consumed message in {} : {}", TOPIC, record.value());
 
                         var objectMapper = new ObjectMapper();
-                        NotifyFollowersDTO notifyFollowersDTO = objectMapper.readValue(record.value(), NotifyFollowersDTO.class);
+                        var notifyFollowersDTO = new NotifyFollowersDTO();
+                        notifyFollowersDTO.setFollowers(objectMapper.readValue(record.value(), new TypeReference<>() {}));
 
                         if (!notifyFollowersDTO.getFollowers().isEmpty()) {
-                            for (var user : notifyFollowersDTO.getFollowers()) {
-                                listen(user);
+                            for (var follower : notifyFollowersDTO.getFollowers()) {
+                                listen(follower);
                             }
                         }
                     }
@@ -77,7 +79,6 @@ public class NotifyFollowersConsumer {
                 kafkaConsumer.close();
             }
         });
-
     }
 
     public KafkaConsumer<String, String> getKafkaConsumer() {
@@ -92,6 +93,6 @@ public class NotifyFollowersConsumer {
 
     public void listen(String username) {
         log.info("sending notification via websockets");
-        template.convertAndSendToUser(username, "/user/queue/topic_notify", 1);
+        template.convertAndSendToUser(username, "/queue/timeline", 1);
     }
 }
